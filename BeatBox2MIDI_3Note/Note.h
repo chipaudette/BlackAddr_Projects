@@ -20,7 +20,7 @@ class Note {
     unsigned long start_millis=0;
     unsigned long end_millis = 0;
     byte chan = MIDI_SEND_CHANNEL-1;
-    unsigned long default_duration_millis = 500;
+    unsigned long default_duration_millis = 125;
     unsigned long last_checked_millis; //use this to look for millis wrap-around
 
     int startNote(void) {

@@ -50,9 +50,9 @@ const int minGain = 0, midGain = 23, maxGain = 31; //for the gain knob (if imple
 // ///////////////////////////////////////// MIDI NOTE STUFF
 
 int chooseNoteNum(float pot_val, int centerValue) { //pot_val is 0.0 to 1.0
-  const int offset = 36;
-  const int width = 16;  // how many semitones should the knob span?
-  return (int)(width*pot_val + 0.5)+offset+centerValue; //the 0.5 is make it round, not floor
+  const int offset = 0;  //was 36.  Now, this ends up being built into "centerValue"
+  const int width = 13;  //how many semitones should the knob span?  was 16.  dropped to 14
+  return (int)(width*(pot_val-0.5) + 0.5)+offset+centerValue; //the first 0.5 is to make centerValue be the center.  The second 0.5 is make it round, not floor
 }
 
 // ///////////////////////////////////////// BlackAddr hardware stuff
@@ -164,12 +164,13 @@ void serviceKnobsAndButtons(void) {
 
   //service the three pots
   for (int i=0; i<N_CHAN; i++) {
-    controls.checkPotValue(pot_handle[i], potValue);
-    int new_val = chooseNoteNum(potValue,centerNotes[i]);
-    if (new_val != notes[i].noteNum) {
-      notes[i].noteNum = new_val;
-      notes[i].startNote();  //play an example of the note
-      Serial.println("New NoteNum[" + String(new_val) + "] = " + String(new_val)); 
+    if (controls.checkPotValue(pot_handle[i], potValue)) { //returns true if value has changed
+      int new_val = chooseNoteNum(potValue,centerNotes[i]);
+      if (new_val != notes[i].noteNum) {
+        notes[i].noteNum = new_val;
+        notes[i].startNote();  //play an example of the note
+        Serial.println("New NoteNum[" + String(new_val) + "] = " + String(new_val)); 
+      }
     }
   }
 
