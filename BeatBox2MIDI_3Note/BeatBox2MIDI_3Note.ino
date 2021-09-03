@@ -8,7 +8,7 @@
 	
 	Create MIDI notes by "beat boxing" into a microphone.
 	This version is sensitive to three types of sounds:
-	    * Low pitched: such as a kick
+	  * Low pitched: such as a kick
 		* Mid-pitched: such as a snare/clap
 		* High-pitched: such as a hi-hat
 	You can, of course, map these sounds to any MIDI note.
@@ -36,7 +36,7 @@
 #include "BAEffects.h"
 
 // here's where I define some important stuff for myself 
-#define MIDI_SEND_CHANNEL 10
+#define MIDI_SEND_CHANNEL 10  //channel 10 is often drum machines
 #include "Note.h"  //uses MIDI_SEND_CHANNEL
 Note notes[N_CHAN];
 
@@ -45,7 +45,6 @@ Note notes[N_CHAN];
 
 //variables for interpreting some user conrols
 const int centerNotes[N_CHAN] = {36, 39, 42}; //kick, clap, closed hi-hat
-const int minGain = 0, midGain = 23, maxGain = 31; //for the gain knob (if implemented).  23 is 0dB of gain for the WM8731 codec
 
 // ///////////////////////////////////////// MIDI NOTE STUFF
 
@@ -90,8 +89,9 @@ void setupKnobsAndButtons(void) {
 }
 
 void setupAICconfiguration(void) {
-  codecControl.setLeftInputGain(midGain);  // Span 0-31 in 1.5dB steps. 23 = 10111 = 0 dB of CODEC analog gain
-  codecControl.setRightInputGain(midGain); // Span 0-31 in 1.5dB steps. 23 = 10111 = 0 dB of CODEC analog gain
+  //gain settings can be values of 0 to 31, with 23 being 0 dB of gain
+  codecControl.setLeftInputGain(23);  // Span 0-31 in 1.5dB steps. 23 = 10111 = 0 dB of CODEC analog gain
+  codecControl.setRightInputGain(23); // Span 0-31 in 1.5dB steps. 23 = 10111 = 0 dB of CODEC analog gain
   codecControl.setLeftInMute(false);  //make sure not muted
   codecControl.setRightInMute(false); //not muted
   codecControl.setHPFDisable(false);  // Start with the HPF enabled.

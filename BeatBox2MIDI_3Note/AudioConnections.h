@@ -1,22 +1,20 @@
 
 
 // Define audio classes
-AudioInputI2S            i2s_in;  
-AudioFilterBiquad        dcblock;   
-AudioFilterStateVariable        lp[N_CHAN]; 
-AudioFilterStateVariable        bp[N_CHAN]; 
-AudioFilterStateVariable        hp[N_CHAN];       
-AudioRMS                 rms_lp, rms_hp, rms_bp;      
-AudioThresholdCompare    thresh;
-AudioTriggerMIDI_3Chan   trigMIDI;
-AudioOutputI2S           i2s_out;  
+AudioInputI2S              i2s_in;   //Audio in
+AudioFilterBiquad          dcblock;  //remove any leftover DC bias
+AudioFilterStateVariable   lp[3];    //will be 3 filters in series 
+AudioFilterStateVariable   bp[3];    //will be 3 filters in series
+AudioFilterStateVariable   hp[3];    //will be 3 filters in series      
+AudioRMS                   rms_lp, rms_hp, rms_bp; //custom class
+AudioThresholdCompare      thresh;   //custom class
+AudioTriggerMIDI_3Chan     trigMIDI; //custom class
+AudioOutputI2S             i2s_out;  //audio output 
 
 // Define audio connections
-
 #define OUTPUT_LP 0  //for the state variable filter class
 #define OUTPUT_BP 1 //for the state variable filter class
-#define OUTPUT_HP 2 //for the state variable filter class
-
+#define OUTPUT_HP 2 //for the state variable filter class  
 AudioConnection          patchCord1(i2s_in, 0, dcblock, 0); 
    
 AudioConnection          patchCord10(dcblock, 0, lp[0], 0);       
@@ -47,13 +45,21 @@ AudioConnection          patchCord51(thresh, 0, i2s_out, 1);
 void setupSignalProcessing(void) {
   dcblock.setHighpass(0,40.0f,0.707);
 
-  float lp_cutoff_Hz = 400.0f; //originally 250
-  float bp_center_Hz = 2000.0f; //originally 2000
-  float hp_cutoff_Hz = 3000.0f; //originally 2000
+  #if 0
+    //from blog
+    float lp_cutoff_Hz = 1000.0f;  //originally 400...raise this to better reflect the 1200 from the blog
+    float bp_center_Hz = 2000.0f; //originally 2000
+    float hp_cutoff_Hz = 3000.0f; //originally 3000  
+  #else
+    //empircally derived
+    float lp_cutoff_Hz = 400.0f;  //originally 400...raise this to better reflect the 1200 from the blog
+    float bp_center_Hz = 2000.0f; //originally 2000
+    float hp_cutoff_Hz = 3000.0f; //originally 3000
+  #endif
 
   for (int i=0; i < N_CHAN; i++) {
     lp[i].frequency(lp_cutoff_Hz); lp[i].resonance(0.707); lp[i].octaveControl(0.0);
-    bp[i].frequency(bp_center_Hz); bp[i].resonance(0.707); bp[i].octaveControl(0.0); 
+    bp[i].frequency(bp_center_Hz); bp[i].resonance(0.707); bp[i].octaveControl(0.0);  //note that bandwidth = fc/Q, so for fc = 2000 and Q = 0.707, BW is 2828 Hz.  This is too fat?
     hp[i].frequency(hp_cutoff_Hz); hp[i].resonance(0.707); hp[i].octaveControl(0.0);
   }
 
