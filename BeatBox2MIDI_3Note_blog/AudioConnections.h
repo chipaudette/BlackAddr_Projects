@@ -75,7 +75,7 @@ void setupSignalProcessing(void) {
   //setup threshold
   float threshold_lp_dBFS = -40.0f; //was -35...a more negative number is more sensitive
   detectClassify.setThreshold_dBFS(0,threshold_lp_dBFS);
-  trigMIDI.set_minSpaceSec(0.030);
+  trigMIDI.set_minSpaceSec(0.10);
 
   float threshold_bp_dBFS = -60.0f;
   detectClassify.setThreshold_dBFS(1,threshold_bp_dBFS);

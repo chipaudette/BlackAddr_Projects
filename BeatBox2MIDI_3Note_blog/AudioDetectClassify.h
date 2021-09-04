@@ -91,9 +91,12 @@ class AudioDetectClassify : public AudioStream {
       //now, compare to our classification criteria
       const int low=0, mid=1, high=2;
       const int OUT_VAL = 32767;
-      const float kick_thresh_dB = -27.0+5.0; //tweak the value based on experiment
+      const float kick_thresh_dB = -27.0+0.0; //tweak the value based on experiment
       const float hat_clap_divide_dB = -15.0;
+      const float required_hat_thresh_dB = -10.0;
+      const float required_clap_thresh_dB = -25.0;
       const float kick_thresh_pow = powf(10.0f, kick_thresh_dB/10.0f), hat_clap_divide_pow = powf(10.0f, hat_clap_divide_dB/10.0f);
+      const float required_hat_thresh_pow = powf(10.0f, required_hat_thresh_dB/10.0f), required_clap_thresh_pow = powf(10.0f, required_clap_thresh_dB/10.0f);
       for (int i=0; i < AUDIO_BLOCK_SAMPLES; i++) {
         bool is_detected = false;
         for (int Ichan=0; Ichan < N_CHAN; Ichan++) if (is_above[Ichan]) is_detected = true; //are there any detections in the three bands?
@@ -107,12 +110,26 @@ class AudioDetectClassify : public AudioStream {
             out_block[low]->data[i] = OUT_VAL;
           } else {
             //there are highs.  Now look at mids.
+
+            /* these are the original rules, as described in the blog post
             if (sig_pow_per_band[i][mid] <= hat_clap_divide_pow) { //if there are highs but not much mids, it must be hihat
               //not much mids...so it is a hihat!
               out_block[high]->data[i] = OUT_VAL;
             } else {
               //there are mids..so it is a clap!
               out_block[mid]->data[i] = OUT_VAL;
+            }
+            */
+
+            //these are the revised rules
+            if (sig_pow_per_band[i][mid] >= hat_clap_divide_pow) { //lots of mids?  must be clap!
+              out_block[mid]->data[i] = OUT_VAL;
+            } else { //not much mids
+              if (sig_pow_per_band[i][high] >= required_hat_thresh_pow) { //lots and lots of highs...must be hats
+                out_block[high]->data[i] = OUT_VAL;
+              } else if (sig_pow_per_band[i][mid] >= required_clap_thresh_pow) { //here's a secondary way to trigger the clap...some mids, but not enough highs for a hat
+                out_block[mid]->data[i] = OUT_VAL;
+              }
             }
           }
         }
