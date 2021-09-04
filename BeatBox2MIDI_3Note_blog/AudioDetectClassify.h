@@ -16,25 +16,36 @@ class AudioDetectClassify : public AudioStream {
       // /////////////////////// get input and output data blocks
       audio_block_t* in_block[N_CHAN];
       audio_block_t* out_block[N_CHAN];
+      audio_block_t* out2_block[N_CHAN];
       bool did_allocation_fail = false;
+      bool did_receive_fail = false;
       for (int i=0; i<N_CHAN;i++) {
         //get the input audio data block
         in_block[i] = receiveReadOnly(i);
-        if (in_block[i] == NULL) did_allocation_fail = true;
+        if (in_block[i] == NULL) did_receive_fail = true;
 
         //get the output audio blocks
         out_block[i] = allocate();
         if (out_block[i]==NULL) did_allocation_fail = true;
+
+        //get the second set of output audio blocks
+        out2_block[i] = allocate();
+        if (out2_block[i]==NULL) did_allocation_fail = true;
       }
-      if (did_allocation_fail) {
+      if ((did_receive_fail) || (did_allocation_fail)) {
         //release data and return
-        for (int i=0; i<N_CHAN;i++) { release(in_block[i]); release(out_block[i]);  }
+        //if (did_receive_fail) Serial.println("AudioDetectClassify: failed to receive one or more channels");
+        //if (did_allocation_fail) Serial.println("AudioDetectClassify: failed to allocate one or more audio blocks");
+        for (int i=0; i<N_CHAN;i++) { release(in_block[i]); release(out_block[i]); release(out2_block[i]); }
         return;
       }
 
       //clear the output blocks
       for (int Ichan=0; Ichan < N_CHAN; Ichan++) {
-        for (int i=0; i < AUDIO_BLOCK_SAMPLES; i++) out_block[Ichan]->data[i] = 0;
+        for (int i=0; i < AUDIO_BLOCK_SAMPLES; i++) {
+          out_block[Ichan]->data[i] = 0;
+          out2_block[Ichan]->data[i] = 0;
+        }
       }
 
       // /////////////////////////// Do Audio Processing!
@@ -65,16 +76,23 @@ class AudioDetectClassify : public AudioStream {
       for (int i=0; i < AUDIO_BLOCK_SAMPLES; i++) {
         float sum_pow = 0.0;
         // get the total loudness
-        for (int Ichan=0; Ichan < N_CHAN; Ichan++) sum_pow += sig_pow_per_band[i][Ichan]; //sum the power
+        for (int Ichan=0; Ichan < N_CHAN; Ichan++) sum_pow += sig_pow_per_band[i][Ichan]; //sum to get the total power
  
         //normalize by total loudness
-        for (int Ichan=0; Ichan < N_CHAN; Ichan++) sig_pow_per_band[i][Ichan] /= sum_pow;
+        for (int Ichan=0; Ichan < N_CHAN; Ichan++) sig_pow_per_band[i][Ichan] /= sum_pow; //normalize by total power 
+
+        //copy to second outputs for transmitting
+        for (int Ichan=0; Ichan < N_CHAN; Ichan++) {
+          float val_dB = 10.0f*log10f(sig_pow_per_band[i][Ichan]);
+          out2_block[Ichan]->data[i] = (int)(10.0f*val_dB + 0.5); //multiply by 10 and round (so we're sending to the 10th of a dB
+        }
       }
 
       //now, compare to our classification criteria
       const int low=0, mid=1, high=2;
       const int OUT_VAL = 32767;
-      const float kick_thresh_dB = -27.0, hat_clap_divide_dB = -15.0;
+      const float kick_thresh_dB = -27.0+5.0; //tweak the value based on experiment
+      const float hat_clap_divide_dB = -15.0;
       const float kick_thresh_pow = powf(10.0f, kick_thresh_dB/10.0f), hat_clap_divide_pow = powf(10.0f, hat_clap_divide_dB/10.0f);
       for (int i=0; i < AUDIO_BLOCK_SAMPLES; i++) {
         bool is_detected = false;
@@ -105,7 +123,9 @@ class AudioDetectClassify : public AudioStream {
       // finish by transmitting the output blocks and releaseing the memory
       for (int Ichan=0; Ichan < N_CHAN; Ichan++) {
         transmit(out_block[Ichan],Ichan);
+        transmit(out2_block[Ichan],Ichan+N_CHAN);
         release(out_block[Ichan]);
+        release(out2_block[Ichan]);
         release(in_block[Ichan]);
       }
       
@@ -128,7 +148,7 @@ class AudioDetectClassify : public AudioStream {
     int down_threshold[N_CHAN];
     float rel_thresh_dB = 10.0;  //if both are triggered, you have to be above this to trigger chan0
     bool state_triggered=false;
-    bool is_above[3];
+    bool is_above[N_CHAN];
 
 
 };

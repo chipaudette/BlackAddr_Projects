@@ -105,9 +105,9 @@ void setupAICconfiguration(void) {
 //Create setup() and loop() functions, per Arduino standard
 elapsedMillis timer;
 void setup(void) {
-  Serial.begin(115200);  //serial to the PC via USB
+  //Serial.begin(115200);  //serial to the PC via USB...unnecessary on Teensy 3.x and 4.x
   Serial1.begin(31250);  //serial for MIDI
-  delay(500);
+  //delay(1000);
   Serial.println("BeatBox2MIDI_Compare3: Starting...");
   
   //TGA_PRO_MKII_REV1(); // Declare the version of the TGA Pro you are using.

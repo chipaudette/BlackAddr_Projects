@@ -23,6 +23,7 @@ AudioConnection          patchCord12(lp[1], OUTPUT_LP, lp[2], 0);
 AudioConnection          patchCord13(lp[2], OUTPUT_LP, rms_lp, 0);
 AudioConnection          patchCord16(rms_lp, 0, detectClassify, 0);  //into first input of the thresholder
 AudioConnection          patchCord18(detectClassify, 0, trigMIDI, 0); //into the first input of the MIDI trigger
+AudioConnection          patchCord19(detectClassify, N_CHAN, trigMIDI, N_CHAN); //send debug info to the trigMIDI for printing when a note is triggered
 
 AudioConnection          patchCord30(dcblock, 0, bp[0], 0);       
 AudioConnection          patchCord31(bp[0], OUTPUT_BP, bp[1], 0);  //output1 is bandpass
@@ -30,6 +31,7 @@ AudioConnection          patchCord32(bp[1], OUTPUT_BP, bp[2], 0);  //output1 is 
 AudioConnection          patchCord33(bp[2], OUTPUT_BP, rms_bp, 0); //output1 is highpass
 AudioConnection          patchCord36(rms_bp, 0, detectClassify, 1);    //into the second input of the thresholder
 AudioConnection          patchCord38(detectClassify, 1, trigMIDI, 1);  //into the second input of the MIDI trigger
+AudioConnection          patchCord39(detectClassify, N_CHAN+1, trigMIDI, N_CHAN+1);  //send debug info to the trigMIDI for printing when a note is triggered
 
 AudioConnection          patchCord20(dcblock, 0, hp[0], 0);       
 AudioConnection          patchCord21(hp[0], OUTPUT_HP, hp[1], 0);  //output2 is highpass
@@ -37,6 +39,7 @@ AudioConnection          patchCord22(hp[1], OUTPUT_HP, hp[2], 0);  //output2 is 
 AudioConnection          patchCord23(hp[2], OUTPUT_HP, rms_hp, 0); //output2 is highpass
 AudioConnection          patchCord26(rms_hp, 0, detectClassify, 2);    //into the third input of the thresholder
 AudioConnection          patchCord28(detectClassify, 2, trigMIDI, 2);  //into the third input of the MIDI trigger
+AudioConnection          patchCord29(detectClassify, N_CHAN+2, trigMIDI, N_CHAN+2);  //send debug info to the trigMIDI for printing when a note is triggered
 
 AudioConnection          patchCord50(i2s_in, 0, i2s_out, 0);
 AudioConnection          patchCord51(detectClassify, 0, i2s_out, 1); 
