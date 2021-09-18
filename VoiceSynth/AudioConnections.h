@@ -10,7 +10,8 @@ AudioThreshold_F32           voiceDetect;
 AudioVoiceToFreq_F32         voiceToFreq;
 AudioEffectGain_F32          freqShift;
 AudioSynthWaveform_F32       waveform;
-AudioMathMultiply_F32        vca;
+AudioMathMultiply_F32        vca;   //not used if using vocoder
+AudioEffectVocoder_F32       vocoder;
 AudioEffectGain_F32          outputGain;
 AudioOutputI2S_F32           i2s_out;  //audio output 
 
@@ -21,7 +22,7 @@ int makeConnections(void) {
   int ind=0;
 
   //connect inputs to DC blocking
-  patchCables[ind++] = new AudioConnection_F32(i2s_in, 0, dcblock[0], 0);
+  patchCables[ind++] = new AudioConnection_F32(i2s_in, 0, dcblock[0], 0); //microphone
   patchCables[ind++] = new AudioConnection_F32(i2s_in, 1, dcblock[1], 0);
 
   //connect to loudness detection
@@ -37,10 +38,16 @@ int makeConnections(void) {
   //connect to sythesis
   patchCables[ind++] = new AudioConnection_F32(voiceToFreq, 0, freqShift, 0);
   patchCables[ind++] = new AudioConnection_F32(freqShift,  0,waveform, 0);
-  patchCables[ind++] = new AudioConnection_F32(waveform, 0, vca, 0); 
-  patchCables[ind++] = new AudioConnection_F32(rms, 0, vca, 1);
-  patchCables[ind++] = new AudioConnection_F32(vca, 0, outputGain, 0);
-
+  #if 0
+    patchCables[ind++] = new AudioConnection_F32(waveform, 0, vca, 0); 
+    patchCables[ind++] = new AudioConnection_F32(rms, 0, vca, 1);
+    patchCables[ind++] = new AudioConnection_F32(vca, 0, outputGain, 0);
+  #else
+    patchCables[ind++] = new AudioConnection_F32(waveform, 0, vocoder, 0);   //synth signal
+    patchCables[ind++] = new AudioConnection_F32(dcblock[0], 0, vocoder, 1); //mic signal
+    patchCables[ind++] = new AudioConnection_F32(vocoder, 0, outputGain, 0);
+  #endif
+  
   //connect raw input to output
   patchCables[ind++] = new AudioConnection_F32(outputGain, 0, i2s_out, 0);
   patchCables[ind++] = new AudioConnection_F32(outputGain, 0, i2s_out, 1);
@@ -85,6 +92,9 @@ void setupSignalProcessing(void) {
   waveform.amplitude(1.0);
   waveform.portamentoTime(0.010); //seconds.  Smoothes changes in pitch
   waveform.begin(AudioSynthWaveform_F32::OSCILLATOR_MODE_SAW);
+
+  //setup the vocoder
+  vocoder.setupProcessing();
 
   //setup the output gain
   outputGain.setGain_dB(3.0);

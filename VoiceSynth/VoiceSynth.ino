@@ -23,6 +23,7 @@
 #include "AudioRMS_F32.h"
 #include "AudioThreshold_F32.h"
 #include "AudioVoiceToFreq_F32.h"
+#include "AudioEffectVocoder_F32.h"
 #include "Note.h"
 #include <BALibrary.h> //for BlackAddr hardware: https://github.com/Blackaddr/BALibrary
 #include <BAEffects.h>
@@ -107,7 +108,7 @@ void setup(void) {
   //Serial.begin(115200);  //serial to the PC via USB...unnecessary on Teensy 3.x and 4.x
   //Serial1.begin(31250);  //serial for MIDI
   delay(500);
-  Serial.println("Vocoder_viaBPFilters: Starting...");
+  Serial.println("VoiceSynth: Starting...");
   
   //TGA_PRO_MKII_REV1(); // Declare the version of the TGA Pro you are using.
   TGA_PRO_REVB(x);  //or TGA_PRO_REVA(x);

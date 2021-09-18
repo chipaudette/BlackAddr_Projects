@@ -25,7 +25,7 @@ class AudioThreshold_F32 : public AudioStream_F32 {
         return; 
       } 
 
-      processAudioData(in_block, out_block);
+      processAudioBlock(in_block, out_block);
       
       //transmit the block and be done
       if (out_block != NULL) transmit(out_block);
@@ -34,7 +34,7 @@ class AudioThreshold_F32 : public AudioStream_F32 {
     } //end update
 
 
-    void processAudioData(audio_block_f32_t *in_block, audio_block_f32_t *out_block) {
+    void processAudioBlock(audio_block_f32_t *in_block, audio_block_f32_t *out_block) {
       if ((in_block == NULL) || (out_block == NULL)) return;
 
       //make easier names for the arrays

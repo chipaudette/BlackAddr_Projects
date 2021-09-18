@@ -42,7 +42,7 @@ class AudioVoiceToFreq_F32 : public AudioStream_F32 {
         return; 
       } 
 
-      processAudioData(in_block, in_block2, out_block);
+      processAudioBlock(in_block, in_block2, out_block);
       
       //transmit the block and be done
       if (out_block != NULL) transmit(out_block);
@@ -51,7 +51,7 @@ class AudioVoiceToFreq_F32 : public AudioStream_F32 {
       release(in_block2);
     } //end update
 
-    void processAudioData(audio_block_f32_t *in_block, audio_block_f32_t *in_block2, audio_block_f32_t *out_block) {
+    void processAudioBlock(audio_block_f32_t *in_block, audio_block_f32_t *in_block2, audio_block_f32_t *out_block) {
       if ((in_block == NULL) || (in_block2 == NULL) || (out_block == NULL)) return;
 
       //offset the prev_crossing index by one block length

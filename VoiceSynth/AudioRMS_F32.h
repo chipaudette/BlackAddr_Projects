@@ -26,6 +26,17 @@ class AudioRMS_F32 : public AudioStream_F32 {
 
       //Serial.print("AudioRMS: data[0] = ");Serial.println(in_block->data[0]);
     
+      processAudioBlock(in_block,out_block);
+  
+      //transmit the block and be done
+      transmit(out_block);
+      release(out_block);
+      release(in_block);
+    }
+
+    void processAudioBlock(audio_block_f32_t *in_block, audio_block_f32_t *out_block) {
+      if ((in_block == NULL) || (out_block == NULL)) return;
+      
       //compute RMS
       float float_val;
       float one_minus_coeff = 1.0f - filter_coeff;
@@ -34,13 +45,8 @@ class AudioRMS_F32 : public AudioStream_F32 {
         filt_wav2  = filter_coeff*(float_val*float_val) + one_minus_coeff*filt_wav2;
         out_block->data[i] = sqrtf(filt_wav2);
       }
-  
-      //transmit the block and be done
-      transmit(out_block);
-      release(out_block);
-      release(in_block);
     }
-
+    
     float get_rms(void) { return sqrtf(filt_wav2); };
     float get_rms_dBFS(void) { return 10.0f*log10f(filt_wav2); }
 
