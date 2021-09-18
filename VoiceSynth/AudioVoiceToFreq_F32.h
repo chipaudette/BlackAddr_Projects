@@ -122,7 +122,7 @@ class AudioVoiceToFreq_F32 : public AudioStream_F32 {
     float getFrequency_Hz(void) { return cur_freq_Hz; }
   protected:
     audio_block_f32_t *inputQueueArray[2]; //memory pointer for the input to this module
-    #define N_PERIOD 11
+    #define N_PERIOD 7
     int n_period = N_PERIOD;
     int period_ind = 0; //index for next write into prev_period_samps
     int prev_period_samps[N_PERIOD];
