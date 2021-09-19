@@ -24,6 +24,7 @@
 #include "AudioThreshold_F32.h"
 #include "AudioVoiceToFreq_F32.h"
 #include "AudioEffectVocoder_F32.h"
+#include "AudioPitchQuantize_F32.h"
 #include "Note.h"
 #include <BALibrary.h> //for BlackAddr hardware: https://github.com/Blackaddr/BALibrary
 #include <BAEffects.h>
@@ -31,17 +32,15 @@
 // here's where I create the audio classes and audio connections for the signal processing
 #include "AudioConnections.h"
 
+int n_vocoder_chan = 13; //up to MAX_N_VOCOD_CHAN, which is 16
+int n_octave_shift = 0;
+
 // ///////////////////////////////////////// MIDI NOTE STUFF
 
 /*
 #define N_MIDI_NOTES 1
 Note notes[N_MIDI_NOTES];
 float prev_freq_Hz = 0.0;
-
-int freqToNoteNum(float freq_Hz) { 
-  //https://newt.phys.unsw.edu.au/jw/notes.html
-  return (int)(12.0*log2f(freq_Hz/440)+0.5) + 69 -1;
-}
 
 void issueNewNote(int noteNum) {
   notes[0].noteNum = noteNum;
@@ -133,8 +132,10 @@ void setup(void) {
 
   //setup signal processing
   setupSignalProcessing(); //this is in AudioConnections.h
+  vocoder.setupProcessing(n_vocoder_chan);
 
   //notes[0].enabled=true; //allow notes to start flowing
+  codecControl.setDacMute(false); //unmute!
   Serial.println("setup() complete...");
 }
 
@@ -220,49 +221,59 @@ void serviceKnobsAndButtons(void) {
   for (int i=0; i< 3; i++) {
     if (controls.checkPotValue(pot_handle[i], potValue)) { //returns true if value has changed
       if (i==0) {
-        //change pitch shifting
-        float val = 2*(potValue - 0.5f);  //scale to -1.0 to +1.0
-        freqShift.setGain(powf(2.0,val)); //scale to -1 octave to +1 octave
-      } else if (i==1) {
+        #if 1
+          //change pitch shifting
+          float val = 2*(potValue - 0.5f);  //scale to -1.0 to +1.0
+          val = round(12.0f*val)/12.0f; //round to nearest semitone
+          Serial.println("Shifting pitch octaves by = " + String(val));
+          freqShift.setGain(powf(2.0,val)); //scale to -1 octave to +1 octave
+        #else
+          n_vocoder_chan = vocoder.setupProcessing((int)((potValue * MAX_N_VOCOD_CHAN)+0.5));
+          Serial.println("New Vocoder Channels = " + String(n_vocoder_chan));
+        #endif
+
         
+      } else if (i==1) {
+        freqQuantize.setQuantizeAmount(potValue);
       } else if (i==2) {
         //change the output loudness
         float val_dB = 0.0;
         float mute_thresh = 0.05;
+        float transition_dB = -16 + 12;
+        float max_dB = transition_dB + 24;
         if (potValue < mute_thresh) {
           //turn the volume so low as to mute it
-          val_dB = map(potValue,0.0f,mute_thresh,-50.0f,-16.0f); 
+          val_dB = map(potValue,0.0f,mute_thresh,-50.0,transition_dB); 
         } else {
           //map across a useful range of gain
-          val_dB = map(potValue,mute_thresh,1.0f,-16.0f,12.0f);
+          val_dB = map(potValue,mute_thresh,1.0f,transition_dB,max_dB);
         }
         outputGain.setGain_dB(val_dB);
       }
-      /*
-      int new_val = chooseNoteNum(potValue,centerNotes[i]);
-      if (new_val != notes[i].noteNum) {
-        notes[i].noteNum = new_val;
-        notes[i].startNote();  //play an example of the note
-        Serial.println("New NoteNum[" + String(new_val) + "] = " + String(new_val)); 
-      }
-      */
     }
   }
 
   // Check if SW1 has been toggled (pushed)
   if (controls.isSwitchToggled(button1_handle)) {
-    /*
-    int ret_val =  notes[0].startNote();
-    Serial.print("Started note "); Serial.println(ret_val);
-    */
+    #if 1
+    n_vocoder_chan = vocoder.setupProcessing(n_vocoder_chan-1);
+    Serial.println("New Vocoder Channels = " + String(n_vocoder_chan));
+    #else
+    n_octave_shift = max(-1.0,min(1.0,n_octave_shift-1));
+    freqShift.setGain(powf(2.0,n_octave_shift)); //scale to -1 octave to +1 octave
+    #endif
   }
 
   // Check if SW2 has been toggled (pushed)
   if (controls.isSwitchToggled(button2_handle)) {
-    /*
-    int ret_val = notes[1].startNote();
-    Serial.print("Started note "); Serial.println(ret_val);
-    */
+    #if 1
+      n_vocoder_chan = vocoder.setupProcessing(n_vocoder_chan+1);
+      Serial.println("New Vocoder Channels = " + String(n_vocoder_chan));
+    #else
+      n_octave_shift = max(-1.0,min(1.0,n_octave_shift+1));
+      freqShift.setGain(powf(2.0,n_octave_shift)); //scale to -1 octave to +1 octave
+    #endif
+  
   }
 }
 

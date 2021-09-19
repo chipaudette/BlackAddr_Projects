@@ -2,7 +2,7 @@
 #ifndef _AudioEffectVocoder_F32_h
 #define _AudioEffectVocoder_F32_h
 
-#define N_CHAN (8)
+#define MAX_N_VOCOD_CHAN (16)
 
 #include <AudioFilterBiquad_F32.h> //from Tympan Library
 #include <AudioMathMultiply_F32.h> //from Tympan Library
@@ -17,38 +17,24 @@ class AudioEffectVocoder_F32 : public AudioStream_F32 {
     void update(void) {
       //get the input audio data block
       audio_block_f32_t *in_block = AudioStream_F32::receiveReadOnly_f32(0);
-      if (!in_block) {
-        //Serial.println("No in_block.");
-        return;
-      }
+      if (!in_block) { return; }
 
       //get the input audio data block
       audio_block_f32_t *in_block2 = AudioStream_F32::receiveReadOnly_f32(1);
-      if (!in_block2) {
-        //Serial.println("No in_block.");
-        release(in_block);
-        return;
-      }
+      if (!in_block2) { release(in_block); return; }
 
       //get the output data block
       audio_block_f32_t *out_block = AudioStream_F32::allocate_f32();
-      if (!out_block) { 
-        //Serial.println("No out_block.");
-        release(in_block);
-        release(in_block2);  
-        return; 
-      } 
+      if (!out_block) { release(in_block); release(in_block2);  return; } 
 
-      processAudioData(in_block, in_block2, out_block);
+      processAudioBlock(in_block, in_block2, out_block);
       
       //transmit the block and be done
       if (out_block != NULL) transmit(out_block);
-      release(out_block);
-      release(in_block);
-      release(in_block2);
+      release(out_block); release(in_block); release(in_block2);
     } //end update
 
-    void processAudioData(audio_block_f32_t *in_block, audio_block_f32_t *in_block2, audio_block_f32_t *out_block) {
+    void processAudioBlock(audio_block_f32_t *in_block, audio_block_f32_t *in_block2, audio_block_f32_t *out_block) {
       if ((in_block == NULL) || (in_block2 == NULL) || (out_block == NULL)) return;
       static int count=0;
       count++;
@@ -65,7 +51,7 @@ class AudioEffectVocoder_F32 : public AudioStream_F32 {
       audio_block_f32_t *in_synth = in_block, *in_voice = in_block2;
 
       //process each vocoder
-      for (int Ichan=0; Ichan<N_CHAN; Ichan++) {
+      for (int Ichan=0; Ichan<n_chan; Ichan++) {
         //voice filtering
         bp_voice[Ichan].processAudioBlock(in_voice,foo_voice);
         bp2_voice[Ichan].processAudioBlock(foo_voice,foo_voice);
@@ -102,13 +88,27 @@ class AudioEffectVocoder_F32 : public AudioStream_F32 {
       
 
 
-    void setupProcessing(void) {
-      float octave_frac = 2.5; //1 is whole-octave, 2 is half-octave, 3 is third-octave, etc
-      octave_frac = ((float)(N_CHAN-1)) / (logf(8000.0/125.0)/logf(2.0)); //gives 2.5 for N_CHAN = 16
-      float filter_Q = 2.0;  //was 4.0.  bandwidth = fc/Q...so 1-octave width requires resonance of 1.0, 1/2-octave = 2.0, etc
+    int setupProcessing(int _n_chan = MAX_N_VOCOD_CHAN) {
+      mute_output = true;
+      int n_chan_new = max(3.0,min(MAX_N_VOCOD_CHAN,_n_chan));
+      //if (n_chan_new == n_chan) return n_chan;
+      if (n_chan_new < n_chan) n_chan = n_chan_new;
       
-      for (int i=0; i<N_CHAN;i++) {
-        float bp_center_Hz = 125.*powf(2.0,float(i)/octave_frac); //every partial octave
+      float start_freq_Hz = 62.5, end_freq_Hz = 12000.0;
+      if (n_chan_new < 9) start_freq_Hz = 125.0; //with fewer channels start higher
+      if (n_chan_new < 4) end_freq_Hz = 8000.0f;
+      if (n_chan_new < 3) {start_freq_Hz = 250.0; end_freq_Hz = 3000.0; }
+      float octave_frac = ((float)(n_chan_new-1)) / (logf(end_freq_Hz/start_freq_Hz)/logf(2.0)); //gives 2.5 for n_chan = 16
+      float min_Q= 1.0, max_Q = 3.5;
+      float filter_Q = max(min_Q,min(max_Q,2 * octave_frac));
+      //float filter_Q = 4.0;  //was 4.0.  bandwidth = fc/Q...so 1-octave width requires resonance of 1.0, 1/2-octave = 2.0, etc
+
+
+      Serial.println("AudioEffectVocoder: octave_frac = " + String(octave_frac) + ", Q = " + String(filter_Q));
+      
+      for (int i=0; i<n_chan_new;i++) {
+
+        float bp_center_Hz = start_freq_Hz*powf(2.0,float(i)/octave_frac); //every partial octave
         Serial.println("Setting filter " + String(i) + " to " + String(bp_center_Hz) + "Hz with Q " + String(filter_Q)); 
   
         //configure the BP for the voice and synth
@@ -122,9 +122,13 @@ class AudioEffectVocoder_F32 : public AudioStream_F32 {
         rms_voice[i].set_ave_sec(rms_ave_sec);
 
         //adjust gain based on frequency
-        float gains[] = {0.25, 1.0};
+        //float gains[] = {0.25 , 1.0};
+        float gains[] = {0.4 , 1.0};
+        gains[0] = max(gains[0],min(1.0,gains[0] * n_chan / 8)); //make gains[0] closer to 1.0 with fewer channels
         float freqs_Hz[] = {300.0, 1000.0};
-        if (bp_center_Hz <= freqs_Hz[0]) {
+        if (bp_center_Hz <= 100) {
+          mixer_gain[i] = gains[0]/2;
+        } else if (bp_center_Hz <= freqs_Hz[0]) {
           mixer_gain[i] = gains[0];
         } else if (bp_center_Hz >= freqs_Hz[1]) {
           mixer_gain[i] = gains[1];
@@ -135,16 +139,25 @@ class AudioEffectVocoder_F32 : public AudioStream_F32 {
         }
       }
 
-      float final_gain_dB = 10.0;
+      //float final_gain_dB = 10.0;
+      float final_gain_dB = 10.0-3.0;
       final_gain = sqrtf(powf(10.0f,final_gain_dB/10.0));
+
+
+      if (n_chan_new > n_chan) n_chan = n_chan_new; //when increasing, what until everything is defined
+      mute_output = false;
+      return n_chan;
     }
 
-    float32_t mixer_gain[N_CHAN];
+    float32_t mixer_gain[MAX_N_VOCOD_CHAN];
     float32_t final_gain = 1.0;
   protected:
-    AudioFilterBiquad_F32 bp_synth[N_CHAN], bp2_synth[N_CHAN];
-    AudioFilterBiquad_F32 bp_voice[N_CHAN], bp2_voice[N_CHAN];
-    AudioRMS_F32 rms_voice[N_CHAN];
+    int n_chan = MAX_N_VOCOD_CHAN;
+    AudioFilterBiquad_F32 bp_synth[MAX_N_VOCOD_CHAN], bp2_synth[MAX_N_VOCOD_CHAN];
+    AudioFilterBiquad_F32 bp_voice[MAX_N_VOCOD_CHAN], bp2_voice[MAX_N_VOCOD_CHAN];
+    AudioRMS_F32 rms_voice[MAX_N_VOCOD_CHAN];
+    bool mute_output = false;
+    
 
   private:
     audio_block_f32_t *inputQueueArray[2]; //memory pointer for the input to this module

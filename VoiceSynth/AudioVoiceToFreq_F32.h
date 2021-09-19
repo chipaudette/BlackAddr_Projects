@@ -17,38 +17,24 @@ class AudioVoiceToFreq_F32 : public AudioStream_F32 {
     AudioVoiceToFreq_F32(void) : AudioStream_F32(2,inputQueueArray) { }
 
     void update(void) {
- 
       //get the input audio data block
       audio_block_f32_t *in_block = AudioStream_F32::receiveReadOnly_f32(0);
-      if (!in_block) {
-        //Serial.println("No in_block.");
-        return;
-      }
+      if (!in_block) {return;}
 
       //get the input audio data block
       audio_block_f32_t *in_block2 = AudioStream_F32::receiveReadOnly_f32(1);
-      if (!in_block2) {
-        //Serial.println("No in_block.");
-        release(in_block);
-        return;
-      }
+      if (!in_block2) {release(in_block); return; }
 
       //get the output data block
       audio_block_f32_t *out_block = AudioStream_F32::allocate_f32();
-      if (!out_block) { 
-        //Serial.println("No out_block.");
-        release(in_block);
-        release(in_block2);  
-        return; 
-      } 
+      if (!out_block) { release(in_block); release(in_block2); return; } 
 
       processAudioBlock(in_block, in_block2, out_block);
       
       //transmit the block and be done
       if (out_block != NULL) transmit(out_block);
       release(out_block);
-      release(in_block);
-      release(in_block2);
+      release(in_block); release(in_block2);
     } //end update
 
     void processAudioBlock(audio_block_f32_t *in_block, audio_block_f32_t *in_block2, audio_block_f32_t *out_block) {

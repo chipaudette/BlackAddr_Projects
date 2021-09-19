@@ -85,6 +85,8 @@ void setupKnobsAndButtons(void) {
 }
 
 void setupAICconfiguration(void) {
+  codecControl.setDacMute(true);
+  
   //gain settings can be values of 0 to 31, with 23 being 0 dB of gain
   //codecControl.setLeftInputGain(23);  // Span 0-31 in 1.5dB steps. 23 = 10111 = 0 dB of CODEC analog gain
   codecControl.setLeftInputGain(28);  // Span 0-31 in 1.5dB steps. 23 = 10111 = 0 dB of CODEC analog gain

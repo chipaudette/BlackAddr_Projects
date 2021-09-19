@@ -8,6 +8,7 @@ AudioFilterBiquad_F32        lp_filt1,lp_filt2;
 AudioRMS_F32                 rms;
 AudioThreshold_F32           voiceDetect;
 AudioVoiceToFreq_F32         voiceToFreq;
+AudioPitchQuantize_F32       freqQuantize;
 AudioEffectGain_F32          freqShift;
 AudioSynthWaveform_F32       waveform;
 AudioMathMultiply_F32        vca;   //not used if using vocoder
@@ -36,7 +37,8 @@ int makeConnections(void) {
   patchCables[ind++] = new AudioConnection_F32(voiceDetect,0, voiceToFreq,1);
 
   //connect to sythesis
-  patchCables[ind++] = new AudioConnection_F32(voiceToFreq, 0, freqShift, 0);
+  patchCables[ind++] = new AudioConnection_F32(voiceToFreq, 0, freqQuantize, 0);
+  patchCables[ind++] = new AudioConnection_F32(freqQuantize, 0, freqShift, 0);
   patchCables[ind++] = new AudioConnection_F32(freqShift,  0,waveform, 0);
   #if 0
     patchCables[ind++] = new AudioConnection_F32(waveform, 0, vca, 0); 
@@ -94,7 +96,7 @@ void setupSignalProcessing(void) {
   waveform.begin(AudioSynthWaveform_F32::OSCILLATOR_MODE_SAW);
 
   //setup the vocoder
-  vocoder.setupProcessing();
+  //vocoder.setupProcessing(n_vocoder_chan);
 
   //setup the output gain
   outputGain.setGain_dB(3.0);

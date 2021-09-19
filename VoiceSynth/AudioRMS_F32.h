@@ -11,18 +11,11 @@ class AudioRMS_F32 : public AudioStream_F32 {
     void update(void) {
       //get the input audio data block
       audio_block_f32_t *in_block = receiveReadOnly_f32();
-      if (!in_block) {
-        //Serial.println("No in_block.");
-        return;
-      }
+      if (!in_block) {return; }
 
       //get the output data block
       audio_block_f32_t *out_block = allocate_f32();
-      if (!out_block) { 
-        //Serial.println("No out_block.");
-        release(in_block); 
-        return; 
-      }
+      if (!out_block) { release(in_block); return; }
 
       //Serial.print("AudioRMS: data[0] = ");Serial.println(in_block->data[0]);
     
@@ -30,8 +23,7 @@ class AudioRMS_F32 : public AudioStream_F32 {
   
       //transmit the block and be done
       transmit(out_block);
-      release(out_block);
-      release(in_block);
+      release(out_block); release(in_block);
     }
 
     void processAudioBlock(audio_block_f32_t *in_block, audio_block_f32_t *out_block) {

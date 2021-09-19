@@ -12,25 +12,17 @@ class AudioThreshold_F32 : public AudioStream_F32 {
  
       //get the input audio data block
       audio_block_f32_t *in_block = AudioStream_F32::receiveReadOnly_f32();
-      if (!in_block) {
-        //Serial.println("No in_block.");
-        return;
-      }
+      if (!in_block) { return; }
 
       //get the output data block
       audio_block_f32_t *out_block = AudioStream_F32::allocate_f32();
-      if (!out_block) { 
-        //Serial.println("No out_block.");
-        release(in_block); 
-        return; 
-      } 
+      if (!out_block) { release(in_block); return; } 
 
       processAudioBlock(in_block, out_block);
       
       //transmit the block and be done
       if (out_block != NULL) transmit(out_block);
-      release(out_block);
-      release(in_block);
+      release(out_block); release(in_block);
     } //end update
 
 
